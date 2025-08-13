@@ -1,61 +1,44 @@
 import { useState } from 'react';
-import dynamic from 'next/dynamic';
-
-// Dynamically import to avoid SSR issues
-const QrReader = dynamic(() => import('react-web-qr-reader'), { ssr: false });
 
 export default function Worker() {
-  const [scanResult, setScanResult] = useState('');
   const [job, setJob] = useState('');
   const [greenhouse, setGreenhouse] = useState('');
   const [cartons, setCartons] = useState('');
   const [timeSpent, setTimeSpent] = useState('');
 
-  const handleScan = (result) => {
-    if (result) {
-      const value = result.data || result.text || result;
-      setScanResult(value);
-      setGreenhouse(value);
-    }
-  };
-
-  const handleError = (err) => {
-    console.error('QR Scan Error:', err);
-  };
-
   const handleSubmit = () => {
-    console.log({
-      worker: 'Example Worker',
-      job,
-      greenhouse,
-      cartons,
-      timeSpent
-    });
+    if (!job || !greenhouse) {
+      alert('Please enter a greenhouse and select a job first.');
+      return;
+    }
+    if (job === 'Harvesting' && (!cartons || !timeSpent)) {
+      alert('Please enter cartons harvested and time spent.');
+      return;
+    }
+    if (job !== 'Harvesting' && !timeSpent) {
+      alert('Please enter time spent.');
+      return;
+    }
+    console.log({ worker: 'Example Worker', job, greenhouse, cartons, timeSpent });
     alert('Data submitted!');
     setCartons('');
     setTimeSpent('');
-  };
-
-  const previewStyle = {
-    height: 240,
-    width: 320
+    setGreenhouse('');
+    setJob('');
   };
 
   return (
     <div style={styles.container}>
       <h1>Worker Dashboard</h1>
 
-      <h2>Scan Greenhouse QR</h2>
-      <div style={styles.qrContainer}>
-        <QrReader
-          delay={300}
-          style={previewStyle}
-          onError={handleError}
-          onScan={handleScan}
-        />
-      </div>
-
-      {scanResult && <p>Scanned: {scanResult}</p>}
+      <h2>Enter Greenhouse Number</h2>
+      <input
+        type="text"
+        placeholder="Greenhouse ID"
+        value={greenhouse}
+        onChange={(e) => setGreenhouse(e.target.value)}
+        style={styles.input}
+      />
 
       <h2>Select Job</h2>
       <select value={job} onChange={(e) => setJob(e.target.value)} style={styles.input}>
@@ -104,9 +87,6 @@ const styles = {
   container: {
     padding: '20px',
     textAlign: 'center'
-  },
-  qrContainer: {
-    marginBottom: '20px'
   },
   input: {
     padding: '10px',
