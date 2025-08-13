@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 
-const QrReader = dynamic(() => import('react-qr-reader-es6'), { ssr: false });
+// Dynamically import to avoid SSR issues with camera
+const QrScanner = dynamic(() => import('react-qr-scanner'), { ssr: false });
 
 export default function Worker() {
   const [scanResult, setScanResult] = useState('');
@@ -12,14 +13,16 @@ export default function Worker() {
 
   const handleScan = (data) => {
     if (data) {
-      setScanResult(data);
-      // Example: QR code might contain "GH-03"
-      setGreenhouse(data);
+      const value = typeof data === 'string' ? data : data.text;
+      if (value) {
+        setScanResult(value);
+        setGreenhouse(value);
+      }
     }
   };
 
   const handleError = (err) => {
-    console.error(err);
+    console.error('QR Scan Error:', err);
   };
 
   const handleSubmit = () => {
@@ -28,29 +31,34 @@ export default function Worker() {
       return;
     }
 
-    // For harvesting, we track cartons + time
     if (job === 'Harvesting' && (!cartons || !timeSpent)) {
       alert('Please enter cartons harvested and time spent.');
       return;
     }
 
-    // For other jobs, we only track time
     if (job !== 'Harvesting' && !timeSpent) {
       alert('Please enter time spent.');
       return;
     }
 
+    // Send data to your backend or save in storage
     console.log({
       worker: 'Example Worker',
       job,
       greenhouse,
       cartons,
-      timeSpent,
+      timeSpent
     });
 
     alert('Data submitted!');
     setCartons('');
     setTimeSpent('');
+  };
+
+  const previewStyle = {
+    width: '100%',
+    maxWidth: '400px',
+    margin: '0 auto'
   };
 
   return (
@@ -59,11 +67,11 @@ export default function Worker() {
 
       <h2>Scan Greenhouse QR</h2>
       <div style={styles.qrContainer}>
-        <QrReader
+        <QrScanner
           delay={300}
+          style={previewStyle}
           onError={handleError}
           onScan={handleScan}
-          style={{ width: '100%' }}
         />
       </div>
 
@@ -124,8 +132,7 @@ const styles = {
     textAlign: 'center'
   },
   qrContainer: {
-    maxWidth: '400px',
-    margin: '0 auto 20px auto'
+    marginBottom: '20px'
   },
   input: {
     padding: '10px',
