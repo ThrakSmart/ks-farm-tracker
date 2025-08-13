@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 
-// Dynamically import to avoid SSR issues with camera
-const QrScanner = dynamic(() => import('react-qr-scanner'), { ssr: false });
+// Dynamically import to avoid SSR issues
+const QrReader = dynamic(() => import('react-web-qr-reader'), { ssr: false });
 
 export default function Worker() {
   const [scanResult, setScanResult] = useState('');
@@ -11,13 +11,11 @@ export default function Worker() {
   const [cartons, setCartons] = useState('');
   const [timeSpent, setTimeSpent] = useState('');
 
-  const handleScan = (data) => {
-    if (data) {
-      const value = typeof data === 'string' ? data : data.text;
-      if (value) {
-        setScanResult(value);
-        setGreenhouse(value);
-      }
+  const handleScan = (result) => {
+    if (result) {
+      const value = result.data || result.text || result;
+      setScanResult(value);
+      setGreenhouse(value);
     }
   };
 
@@ -26,22 +24,6 @@ export default function Worker() {
   };
 
   const handleSubmit = () => {
-    if (!job || !greenhouse) {
-      alert('Please scan a greenhouse and select a job first.');
-      return;
-    }
-
-    if (job === 'Harvesting' && (!cartons || !timeSpent)) {
-      alert('Please enter cartons harvested and time spent.');
-      return;
-    }
-
-    if (job !== 'Harvesting' && !timeSpent) {
-      alert('Please enter time spent.');
-      return;
-    }
-
-    // Send data to your backend or save in storage
     console.log({
       worker: 'Example Worker',
       job,
@@ -49,25 +31,23 @@ export default function Worker() {
       cartons,
       timeSpent
     });
-
     alert('Data submitted!');
     setCartons('');
     setTimeSpent('');
   };
 
   const previewStyle = {
-    width: '100%',
-    maxWidth: '400px',
-    margin: '0 auto'
+    height: 240,
+    width: 320
   };
 
   return (
     <div style={styles.container}>
-      <h1 style={{ color: '#ff0000' }}>Worker Dashboard</h1>
+      <h1>Worker Dashboard</h1>
 
       <h2>Scan Greenhouse QR</h2>
       <div style={styles.qrContainer}>
-        <QrScanner
+        <QrReader
           delay={300}
           style={previewStyle}
           onError={handleError}
@@ -78,11 +58,7 @@ export default function Worker() {
       {scanResult && <p>Scanned: {scanResult}</p>}
 
       <h2>Select Job</h2>
-      <select
-        value={job}
-        onChange={(e) => setJob(e.target.value)}
-        style={styles.input}
-      >
+      <select value={job} onChange={(e) => setJob(e.target.value)} style={styles.input}>
         <option value="">Select Job</option>
         <option value="Harvesting">Harvesting</option>
         <option value="Pruning">Pruning</option>
@@ -109,7 +85,7 @@ export default function Worker() {
         </>
       )}
 
-      {job !== 'Harvesting' && job && (
+      {job && job !== 'Harvesting' && (
         <input
           type="number"
           placeholder="Time spent (mins)"
@@ -119,9 +95,7 @@ export default function Worker() {
         />
       )}
 
-      <button style={styles.button} onClick={handleSubmit}>
-        Submit
-      </button>
+      <button style={styles.button} onClick={handleSubmit}>Submit</button>
     </div>
   );
 }
