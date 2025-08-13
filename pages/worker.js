@@ -1,16 +1,20 @@
-import dynamic from 'next/dynamic';
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 
-// Dynamically import QR reader so it only loads in browser
-const QrReader = dynamic(() => import('react-qr-reader'), { ssr: false });
+const QrReader = dynamic(() => import('react-qr-reader-es6'), { ssr: false });
 
 export default function Worker() {
   const [scanResult, setScanResult] = useState('');
-  const [manualCode, setManualCode] = useState('');
+  const [job, setJob] = useState('');
+  const [greenhouse, setGreenhouse] = useState('');
+  const [cartons, setCartons] = useState('');
+  const [timeSpent, setTimeSpent] = useState('');
 
   const handleScan = (data) => {
     if (data) {
       setScanResult(data);
+      // Example: QR code might contain "GH-03"
+      setGreenhouse(data);
     }
   };
 
@@ -18,44 +22,98 @@ export default function Worker() {
     console.error(err);
   };
 
-  const handleManualSubmit = () => {
-    if (manualCode.trim() !== '') {
-      setScanResult(manualCode.trim());
+  const handleSubmit = () => {
+    if (!job || !greenhouse) {
+      alert('Please scan a greenhouse and select a job first.');
+      return;
     }
+
+    // For harvesting, we track cartons + time
+    if (job === 'Harvesting' && (!cartons || !timeSpent)) {
+      alert('Please enter cartons harvested and time spent.');
+      return;
+    }
+
+    // For other jobs, we only track time
+    if (job !== 'Harvesting' && !timeSpent) {
+      alert('Please enter time spent.');
+      return;
+    }
+
+    console.log({
+      worker: 'Example Worker',
+      job,
+      greenhouse,
+      cartons,
+      timeSpent,
+    });
+
+    alert('Data submitted!');
+    setCartons('');
+    setTimeSpent('');
   };
 
   return (
     <div style={styles.container}>
-      <h1 style={{ color: '#ff0000' }}>Worker Check-In</h1>
+      <h1 style={{ color: '#ff0000' }}>Worker Dashboard</h1>
 
-      {!scanResult ? (
+      <h2>Scan Greenhouse QR</h2>
+      <div style={styles.qrContainer}>
+        <QrReader
+          delay={300}
+          onError={handleError}
+          onScan={handleScan}
+          style={{ width: '100%' }}
+        />
+      </div>
+
+      {scanResult && <p>Scanned: {scanResult}</p>}
+
+      <h2>Select Job</h2>
+      <select
+        value={job}
+        onChange={(e) => setJob(e.target.value)}
+        style={styles.input}
+      >
+        <option value="">Select Job</option>
+        <option value="Harvesting">Harvesting</option>
+        <option value="Pruning">Pruning</option>
+        <option value="Cleaning">Cleaning</option>
+        <option value="Planting">Planting</option>
+      </select>
+
+      {job === 'Harvesting' && (
         <>
-          <p>Scan your greenhouse QR code:</p>
-          <div style={styles.qrContainer}>
-            <QrReader
-              delay={300}
-              onError={handleError}
-              onScan={handleScan}
-              style={{ width: '100%' }}
-            />
-          </div>
-          <p>Or enter code manually:</p>
           <input
-            type="text"
-            value={manualCode}
-            onChange={(e) => setManualCode(e.target.value)}
-            placeholder="Enter greenhouse code"
+            type="number"
+            placeholder="Cartons harvested"
+            value={cartons}
+            onChange={(e) => setCartons(e.target.value)}
             style={styles.input}
           />
-          <button style={styles.button} onClick={handleManualSubmit}>Submit</button>
+          <input
+            type="number"
+            placeholder="Time spent (mins)"
+            value={timeSpent}
+            onChange={(e) => setTimeSpent(e.target.value)}
+            style={styles.input}
+          />
         </>
-      ) : (
-        <div>
-          <h2>Assigned to: {scanResult}</h2>
-          <p>✅ You are now checked in for this greenhouse.</p>
-          {/* Here we could log start time, greenhouse, and job type */}
-        </div>
       )}
+
+      {job !== 'Harvesting' && job && (
+        <input
+          type="number"
+          placeholder="Time spent (mins)"
+          value={timeSpent}
+          onChange={(e) => setTimeSpent(e.target.value)}
+          style={styles.input}
+        />
+      )}
+
+      <button style={styles.button} onClick={handleSubmit}>
+        Submit
+      </button>
     </div>
   );
 }
@@ -67,16 +125,13 @@ const styles = {
   },
   qrContainer: {
     maxWidth: '400px',
-    margin: '0 auto',
-    padding: '10px',
-    backgroundColor: '#fff',
-    borderRadius: '8px'
+    margin: '0 auto 20px auto'
   },
   input: {
     padding: '10px',
     fontSize: '16px',
     width: '80%',
-    margin: '10px auto',
+    margin: '5px auto',
     display: 'block'
   },
   button: {
@@ -86,6 +141,7 @@ const styles = {
     padding: '12px 20px',
     fontSize: '16px',
     borderRadius: '6px',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    marginTop: '10px'
   }
 };
